@@ -1,0 +1,19 @@
+# History files
+.Rhistory
+.RData
+.Ruserdata
+
+# Project files
+.Rproj.user/
+
+# LaTeX intermediary files (clutter)
+*.aux
+*.log
+*.toc
+*.out
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
+# Large data files (uncomment if needed)
+# data/
