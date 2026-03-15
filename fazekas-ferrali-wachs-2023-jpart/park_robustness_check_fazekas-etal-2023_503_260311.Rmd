@@ -1,0 +1,1956 @@
+---
+title: "PLSC 503: Homework 1"
+subtitle: "Extension to Fazekas, Ferrali, and Wachs (2023): Agency Independence, Campaign Contributions, and Favoritism in US Federal Government Contracting"
+author: "Jody Park"
+date: "`r Sys.Date()`"
+output:
+  bookdown::pdf_document2:
+    toc: false
+    number_sections: false
+    latex_engine: xelatex
+colorlinks: true
+urlcolor: blue
+linkcolor: blue
+bibliography: references.bib
+csl: apanodoi.csl
+link-citations: true
+header-includes:
+  - \usepackage[capposition=top]{floatrow}
+  - \usepackage{placeins}   
+  - \usepackage{setspace}
+  - \usepackage{dcolumn}
+  - \usepackage{booktabs}
+  - \usepackage{siunitx}
+  - \usepackage{amsmath}
+  - \usepackage{enumerate}
+  - \usepackage[shortlabels]{enumitem}
+  - \usepackage[hang,flushmargin]{footmisc}	
+  - \usepackage{makecell}
+  - \usepackage{url}
+  - \usepackage{longtable}
+  - \usepackage{graphicx}
+  - \usepackage{array}
+  - \usepackage{multirow}
+  - \usepackage{wrapfig}
+  - \usepackage{float}
+  - \usepackage{colortbl}
+  - \usepackage{pdflscape}
+  - \usepackage{threeparttable}
+  - \usepackage{threeparttablex}
+  - \usepackage[normalem]{ulem}
+  - \usepackage{makecell}
+  - \usepackage{xcolor}
+  - \usepackage{hyperref}
+  - \hypersetup{
+      colorlinks=true,
+      linkcolor=blue,
+      filecolor=magenta,      
+      urlcolor=blue,
+      citecolor=black,
+    }
+  - \usepackage[most]{tcolorbox}
+  - \newtcolorbox{qbox}{enhanced,breakable,boxrule=0.5pt,arc=2mm,
+    colback=gray!10,colframe=black!50,left=6pt,right=6pt,top=6pt,bottom=6pt}
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+                      fig.width = 9, fig.height = 7, fig.retina = 3,
+                      out.width = "100%",
+                      cache = FALSE,
+                      echo = TRUE,
+                      message = FALSE, 
+                      warning = FALSE,
+                      hiline = TRUE
+                      )
+options(tinytex.verbose = TRUE)
+
+# set root directory to the project folder
+knitr::opts_knit$set(root.dir = here::here()) 
+
+# check working directory
+# getwd()
+
+# clear all objects & free up memory if needed
+# rm(list = ls(all.names = TRUE)) 
+# gc()
+
+# load libraries
+library(tidyverse)
+library(ggpubr)
+library(knitr)
+library(kableExtra)
+library(gridExtra)
+library(tidyr)
+library(haven)
+library(readr)
+library(caret)
+library(modelr)
+library(broom)
+library(ggplot2)
+library(plotly)
+library(png)
+library(stringr)
+library(openxlsx)
+library(Hmisc)
+library(MASS) 
+library(lfe) 
+library(modelsummary) 
+library(stargazer)
+library(lubridate) 
+library(scales) 
+library(rdrobust) 
+library(psych) 
+library(nFactors)
+library(here)
+library(rstanarm)
+library(loo)
+
+# resolve conflicts
+library(conflicted)
+conflicts_prefer(dplyr::select)
+conflicts_prefer(dplyr::filter)
+conflicts_prefer(dplyr::summarize)
+conflicts_prefer(dplyr::summarise)
+conflicts_prefer(dplyr::rename)
+conflicts_prefer(dplyr::lag)
+conflicts_prefer(psych::describe)
+conflicts_prefer(dplyr::recode)
+
+select <- dplyr::select
+filter <- dplyr::filter
+summarize <- dplyr::summarize
+summarise <- dplyr::summarise
+rename <- dplyr::rename
+lag <- dplyr::lag
+describe <- psych::describe
+recode <- dplyr::recode
+
+
+# load the authors' constants in the replication code
+source("./functions.R")
+nRep <- 1e3
+set.seed(503) 
+pdf <- TRUE # set to TRUE to output manuscript figures to pdf
+eps <- TRUE # set to TRUE to output manuscript figures to eps
+
+# set base size for figures
+theme_set(theme_minimal(base_size = 10))
+
+```
+
+# 1. Replication Setup
+
+## Citations and Links
+
+- **Original Paper**: Fazekas, M., Ferrali, R., & Wachs, J. (2023). Agency Independence, Campaign Contributions, and Favoritism in US Federal Government Contracting. Journal of Public Administration Research and Theory, 33(2), 262-278.
+
+- **Replication Data**: [R replication codes and dataset](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/3U07EE) from @fazekasagency2023 "Agency Independence, Campaign Contributions, and Favoritism in US Federal Government Contracting (JPART)." 
+
+
+- **Paper for the Extension**: ACS, A. (2025). Mapping the Political Contours of the Regulatory State: Dynamic Estimates of Agency Ideal Points. American Political Science Review, 1-18.
+
+- **Replication Data**: [R replication codes and ACS dataset](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/C7S2SI) from @acsmapping2025 "Mapping the Political Contours of the Regulatory State: Dynamic Estimates of Agency Ideal Points (APSR)."
+
+
+- **Repository Links**:  
+
+  - [Dropbox folder](https://www.dropbox.com/scl/fo/6b5w3zznokywvmlox3dt2/ANIInPxRVHuL4ys3Jqr0JX0?rlkey=3a2d8uvvkcfmbxoldhr91jobu&st=ucxm71yq&dl=0); current code and data for this paper are in the *fazekas-ferrali-wachs-2023-jpart* subfolder.
+
+  - [GitHub repository for this project](https://github.com/jodypark/plsc503_replication_extension_fazekas2023)
+
+\bigskip
+
+## Article Introduction
+
+@fazekasagency2023 argue that companies' political party contributions can bias the award of US federal government contracts, favoring firms that make political donations. The paper investigates the relationship between political party contributions and favoritism in US federal government contracting. The authors examine whether firms that make political donations are more likely to receive favorable treatment in federal procurement, and how this relationship is moderated by the level of agency independence. The study uses a comprehensive dataset of federal contracts, political donations, and agency characteristics to analyze patterns of favoritism and the influence of political contributions on contract awards. The authors find that firms that make political donations are more likely to receive favorable treatment in federal contracting, and this effect is stronger for firms that donate to the party in power. Additionally, the relationship between political contributions and favoritism is moderated by agency independence, with less independent agencies showing a stronger relationship between donations and favoritism. The core contribution of the paper is to provide empirical evidence on the influence of political contributions on federal contracting. The authors highlight the potential for favoritism and the role of agency independence in moderating this relationship. The findings have important implications for understanding the dynamics of public procurement and the potential for corruption in government contracting. 
+
+
+I plan to extend the analysis with additional robustness checks by examining how agency ideology moderates the effects of political party contributions on favoritism in federal contracting, following dynamic estimates of regulatory agency ideal points in @acsmapping2025. His measure consists of dynamic estimates of regulatory agency ideal points across four different presidential administrations (from Clinton to Trump), for 69 administrative units. The data is based on (1) Unified Agenda data on planned regulations and (2) the president's discretionary review of those regulations from the Office of Information and Regulatory Affairs (OIRA) docket, which captures the ideological positions of regulatory agencies over time. By merging this agency ideology data with @fazekasagency2023's dataset, I will be able to analyze how the alignment between agency ideology and the party in power affects the relationship between political contributions and favoritism in federal contracting. This extension will provide a deeper understanding of the mechanisms through which political contributions may affect contract awards and how agency characteristics shape this relationship.
+
+
+\bigskip
+
+
+## Data, Variables and Models
+
+### Data
+
+In @fazekasagency2023, the authors use a comprehensive dataset:
+
+1. **Transaction-level federal contract data**: [USAspending.gov](USAspending.gov)
+
+2. **Campaign contributions data**: Registered campaign contributions for 2004-15 from [The Database on Ideology, Money in Politics, and Elections (DIME)](https://data.stanford.edu/dime) [@bonicadime2016]
+
+3. **Favoritism measure**: Use an extensive review of the literature to select indicators that have been used to measure favoritism in public procurement (Favoritism Risk Indicator, FRI). The authors combine these indicators into a composite index (`CRI7_final`) that captures the overall risk of favoritism in federal contracts.
+
+  - *7 indicators for FRI*
+
+    - (1) Single bidding
+
+    - (2) No publication
+
+    - (3) Non-competitive procedure type 
+
+    - (4) Non-open solicitation type
+
+    - (5) Contract modifications
+
+    - (6) Supplier tax haven registration
+
+    - (7) Supplier debarred
+
+
+\bigskip
+
+
+### Variables
+
+1. **Dependent Variable**: Favored treatment in federal procurement
+
+- (1) **`logValue`**: Logarithm of the total contract value
+
+- (2) **Composite Favoritism Index (`CRI7_final`)**: Average of the seven favoritism indicators listed above
+
+
+2. **Independent Variables**: Political Donations
+
+- (1) **`isDonation`**: Dummy variable indicating whether a firm made any political donation
+
+- (2) **`logDonation`**: Logarithm of the total political donation amount
+
+
+3. **Moderating Variable**: Agency Independence (`agency_cat`) - Categorize federal agencies based on their level of independence from political control [@dahlstrom2021]
+
+  - *4 categories for agency insulation categories*
+
+    - (1) Executive Departments (not separate bureaus)
+
+    - (2) Executive Departments (distinct bureaus)
+
+    - (3) Independent Administrations (agencies structured similar to executive departments but not part of the cabinet)
+
+    - (4) Independent Commissions and Regulatory Commissions
+
+
+4. **Control Variables**: Contract-level characteristics
+
+
+5. **Fixed Effects**: Product category, state, contracting agency, and congressional term
+
+
+```{r keyvar, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results='asis', floating = FALSE, tab.pos="H", tab.align="center", tab.cap = "Key Variables", out.width = "100%"}
+
+# key variables table
+key_vars <- tibble(
+  Variable = c(
+    "isDonation",
+    "logDonation",
+    "agency_cat",
+    "logValue",
+    "contract_dummy",
+    "commercial_dummy",
+    "ctypefixed",
+    "ctypecost",
+    "rev",
+    "dollarsobligated_sum",
+    "pduns",
+    "congTerm"
+  ),
+  Description = c(
+    "Dummy variable indicating whether a firm made any political donation",
+    "Logarithm of the total political donation amount",
+    "Categorical indicator of federal agency type (2 categories)",
+    "Logarithm of the total contract value",
+    "Dummy variable for GSA-run procurement",
+    "Dummy variable indicating use of commercial procurement procedures",
+    "Dummy variable for fixed-price contracts",
+    "Dummy variable for cost-plus contracts",
+    "Logarithm of the firm's total contract revenue in the previous year",
+    "Total dollar amount obligated for the contract",
+    "Unique firm identifier (Dun & Bradstreet number of the parent firm)",
+    "Congressional term (2-year periods starting from 2001)"
+  ),
+  Type = c(
+    "Binary",
+    "Continuous",
+    "Categorical",
+    "Continuous",
+    "Binary",
+    "Binary",
+    "Binary",
+    "Binary",
+    "Continuous",
+    "Continuous",
+    "Categorical",
+    "Categorical"
+  )
+)
+
+# plot a descriptive table
+t0 <- knitr::kable(key_vars, format = "latex", caption = "Key Variables",
+                   booktabs = TRUE,
+            col.names = c("Variable", "Description", "Type"),
+            align = c("l", "l", "c")) %>%
+  kable_styling(full_width = FALSE,
+                position = "center",
+                latex_options = c("hold_position"))
+
+t0
+
+```
+
+
+```{r loaddata, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results = 'hide'}
+# load the necessary libraries, import the data, and provide a descriptive table for analysis
+# this chunk uses the authors' replication codes
+# load the data
+df <- read_csv("./contracts.csv", na = "NA")
+df <- df %>% mutate(
+    id = 1:nrow(.),
+    # create favoritism measure
+    nmissing = is.na(singleb) + is.na(nocft) + is.na(corr_proc) + is.na(corr_solic) + is.na(tax_haven) + is.na(disbarred) + is.na(modAB_binary),
+    CRI7_final = ifelse(is.na(singleb), 0, singleb) +
+        ifelse(is.na(nocft), 0, nocft) +
+        ifelse(is.na(corr_proc), 0, corr_proc) +
+        ifelse(is.na(corr_solic), 0, corr_solic) +
+        ifelse(is.na(tax_haven), 0, tax_haven) +
+        ifelse(is.na(disbarred), 0, disbarred) +
+        ifelse(is.na(modAB_binary), 0, modAB_binary),
+    CRI7_final = CRI7_final / (7 - nmissing),
+    CRI7_final = ifelse(nmissing > 3, NA, CRI7_final),
+    simple = singleb * corr_proc
+)
+
+# factor analysis for favoritism measure
+mf <- df %>%
+    select(
+      id, singleb, nocft, corr_proc, corr_solic, tax_haven, disbarred, modAB_binary
+    ) %>%
+    na.omit()
+
+cmat <- tetrachoric(mf %>% select(-id))$rho
+test <- nScree(x = cmat)
+
+fas <- list(
+    f71 = fa(mf %>% select(-id), 1, cor = "tet"),
+    f73 = fa(mf %>% select(-id), 3, cor = "tet")
+)
+
+dvs <- list(
+    f71 = factor.scores(mf %>% select(-id), fas$f71)$scores,
+    f73 = factor.scores(mf %>% select(-id), fas$f73)$scores
+)
+dvs <- do.call(cbind, dvs)
+colnames(dvs) <- c(
+    "f71", "f731", "f732", "f733"
+)
+dvs <- as_tibble(dvs) %>% mutate(id = mf$id)
+dvs <- dvs %>% select(id, f71, f731)
+df <- df %>%
+    as_tibble() %>%
+    left_join(dvs)
+
+# create variables for analysis 
+df <- df %>%
+    mutate(
+        donationR = ifelse(current_R_donor < 0, 0, current_R_donor),
+        donationD = ifelse(current_D_donor < 0, 0, current_D_donor),
+        logDonationD = log(donationD + 1),
+        logDonationR = log(donationR + 1),
+        logDonation = log(donationR + donationD + 1),
+        isDonation = as.integer(logDonation > 0),
+        giveAbs = ifelse(D_pres, logDonationD, logDonationR),
+        giveOther = ifelse(D_pres, logDonationR, logDonationD),
+        logValue = log(dollarsobligated_sum),
+        congTerm = floor((year - 2001) / 2),
+        signeddate = as_date(signeddate),
+        product1 = substr(productorservicecode, 1, 1),
+        product2 = substr(productorservicecode, 1, 2),
+        CRI7 = CRI7_final,
+        ctype = recode(
+            contract_type,
+            A = "fixed",
+            B = "fixed",
+            J = "fixed",
+            K = "fixed",
+            L = "fixed",
+            M = "fixed",
+            R = "cost",
+            S = "cost",
+            T = "cost",
+            U = "cost",
+            V = "cost",
+            Y = "cost",
+            Z = "cost",
+            .default = "other"
+        ),
+        ctype = fct_relevel(ctype, "other", "fixed", "cost"),
+        agency_cat = recode(
+            agency_cat2,
+            `cabinet/exec. dep. (not bureau)` = "cabinet/exec. dep.",
+            `cabinet/exec. dep. and bureau` = "cabinet/exec. dep.",
+            `indep. agency` = "indep. agency",
+            `indep. commission & IRC` = "indep. agency"
+        ),
+        agency_cat2 = as_factor(agency_cat2),
+        agency_cat2 = fct_relevel(agency_cat2, "indep. commission & IRC"),
+        agency_cat = as_factor(agency_cat),
+        agency_cat = fct_relevel(agency_cat, "indep. agency")
+    )
+
+revenues <- df %>%
+    group_by(congTerm, pduns) %>%
+    summarize(rev = sum(dollarsobligated_sum)) %>%
+    ungroup()
+
+mods <- list()
+df$CRI7_final <- df$f71
+
+```
+
+
+```{r descriptive, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results='asis', floating = FALSE, tab.pos="H", tab.align="center", tab.cap = "Descriptive Statistics", out.width = "100%"}
+
+# descriptive table 
+# replicate table a1 in their appendix
+
+# select variables from the data
+# add agency category
+desc <- df %>%
+  select(`Single bidding` = singleb,
+        `FRI` = CRI7_final,
+        `Contract value (log)` = logValue,
+        `Donation dummy` = isDonation,
+        `Donation (log)` = logDonation,
+        `Agency category` = agency_cat)
+
+desc_tab <- describe(desc) %>%
+  as.data.frame() %>%
+  rownames_to_column("Variable") %>%
+  select(Variable, n, mean, sd, min, max) %>%
+  mutate(n = as.integer(n),
+  across(c(mean, sd, min, max), ~ round(.x, 3))) %>%
+  rename(N = n, Mean = mean, SD = sd, Min = min, Max = max) %>%
+  mutate(Variable = str_remove(Variable, "\\*$"))
+
+desctable <- knitr::kable(desc_tab,
+  booktabs = TRUE,
+  format = "latex",
+  caption = "Descriptive Statistics",
+  col.names = c("Variable", "N", "Mean", "SD", "Min", "Max"),
+  align = "lrrrrr") %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "center",
+    latex_options = c("hold_position")
+  )
+
+desctable
+
+```
+
+
+### Models
+
+The primary empirical models examine how the effect of political donations on `CRI7_final` varies across agency types, using a two-way fixed-effects specification (i.e., `felm()` function in `lfe` package) with product, state, contracting office, and congressional term fixed effects. Standard errors/p-values are clustered at the supplier and congressional term levels. The main variable of interest is the interaction between `isDonation` and `agency_cat`, which captures how the relationship between political donations and favoritism risk varies across different types of federal agencies. 
+
+Hypothesis 3 holds that donations increase favoritism more in less independent agencies. I test this by replicating donation variables with `agency_cat`, a two-category indicator of agency independence, in a two-way fixed-effects specification with product, state, contracting office, and congressional term fixed effects, and standard errors clustered by firm and congressional term. Table 4 presents the interaction models and Figure 4 presents the corresponding marginal effects of `logDonation` on FRI across a four-category indicator of agency independence (`agency_cat2`).
+
+\newpage
+
+**Tested Hypotheses in the Original Paper**:
+
+In @fazekasagency2023, the authors test the following hypotheses:
+
+- *H1*: By donating to any political party, the company increases its chance of being favored in federal contracting.
+
+- *H2*: By donating to the party in power, the company increases its chance of being favored in federal contracting more than by donating to the opposition.
+
+- *H3*: By donating to the party in power, the company increases its chance of being favored in federal contracting especially when agency independence is low.
+
+
+\newpage
+
+
+# 2. Replication Accuracy
+
+## Figure 3. Density of Donations to Majority and Opposition
+
+```{r replicationsetup, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results = 'hide'}
+
+# replication of main results
+# replicate table 1 in their paper
+
+# use the authors' replication codes ---
+# add explanations 
+
+# H1
+# first 2 models
+baselineH1 <- felm(CRI7_final ~ isDonation + logValue +
+    contract_action_type_dummy + commercial_procedure_dummy + ctype |
+    product2 + congTerm + state_code + contractingofficeid |
+    0 | pduns + congTerm, data = df, exactDOF = T)
+# controls: contract value + procurement characteristics
+# OLS with controls + FE + clustered SEs
+
+# store models 
+mods$h1$bFirm$base <- baselineH1
+
+# continuous donation amount
+mods$h1$bFirm$cont <- update(baselineH1, . ~ . + logDonation)
+
+# thresholds
+# t1: point where donation effect becomes positive
+t1 <- coef(mods$h1$bFirm$cont)
+t1 <- -t1["isDonation"] / t1["logDonation"]
+t3 <- max(df$logDonation) 
+
+# binned donation amounts
+# three bins: low, mid, high
+# for each percentile (50%, 60%, 70%, 80%, 90%) among donors, create bins
+# and estimate model with binned donation variable
+cutLabels <- c("low", "mid", "high")
+mods$h1$bFirm$thresh <- map(
+    seq(.5, .9, .1),
+    function(thresh) {
+        qt <- quantile(df$logDonation[df$isDonation == 1], thresh)
+        cutBins <- c(-1, t1, qt, t3)
+        df <- df %>%
+            mutate(
+                fDonation3 = cut(logDonation, cutBins, cutLabels, include.lowest = T)
+            )
+        update(baselineH1, . ~ . - isDonation + fDonation3, data = df)
+    }
+)
+
+# inline: t1 in distribution of donations
+# returns the share of donor observations whose logDonation is below t1
+df %>%
+    select(pduns, congTerm, logDonation) %>%
+    distinct() %>%
+    filter(logDonation > 0) %>%
+    mutate(logDonation = as.integer(logDonation < t1)) %>%
+    pull(logDonation) %>%
+    mean()
+
+# inline: effect of increasing donations from 1e3 to 1e6
+# computes the predicted change in FRI from increasing donations from $1,000 to $1,000,000 
+# holding everything else constant, using the slope on logDonation
+(log(1e6) - log(1e3)) * coef(mods$h1$bFirm$cont)["logDonation"]
+
+
+# figure on thresholds (figure a2 in appendix)
+pl <- map_dfr(mods$h1$bFirm$thresh, function(m) {
+    tibble(
+        pe = coef(m)[c("fDonation3mid", "fDonation3high")],
+        LB = confint(m)[c("fDonation3mid", "fDonation3high"), 1],
+        UB = confint(m)[c("fDonation3mid", "fDonation3high"), 2],
+        type = c("Intermediate", "Large")
+    )
+}) %>%
+    mutate(
+        tnum = seq(.5, .9, .1) %>% rep(2) %>% sort(),
+        thresh = sprintf(
+            "%s - K$%s",
+            tnum,
+            comma(exp(quantile(df$logDonation[df$isDonation == 1], tnum)) * 1e-3)
+        )
+    )
+# ggplot(pl, aes(x = thresh, y = pe, ymin = LB, ymax = UB, color = type)) +
+#     geom_point(position = position_dodge(width = .5)) +
+#     geom_linerange(position = position_dodge(width = .5)) +
+#     geom_hline(yintercept = 0, lty = "dotted") +
+#     scale_color_manual(values = c("Intermediate" = "grey66", "Large" = "black")) +
+#     labs(
+#         x = "Threshold for intermediate vs. large donation",
+#         y = "Effect of donation on FRI",
+#         color = "Donation size"
+#     ) +
+#     theme(legend.position = "bottom")
+# ggsave("figures/thresholds.pdf", height = 3, width = 4)
+
+# extraction of upper threshold
+t2 <- pl %>%
+    filter(type == "Intermediate" & LB > 0) %>%
+    pull(tnum)
+t2 <- quantile(df$logDonation[df$isDonation == 1], t2[1])
+cutBins <- c(-1, t1, t2, t3)
+
+df <- df %>% mutate(
+    fDonation3 = cut(logDonation, cutBins, cutLabels, include.lowest = T)
+)
+
+# binned model
+mods$h1$bFirm$bins <- update(baselineH1, . ~ . - isDonation + fDonation3)
+
+
+#### Table A10 ####
+
+dfMatch <- df %>%
+    select(
+        CRI7_final,
+        isDonation, fDonation3,
+        logValue, contract_action_type_dummy, commercial_procedure_dummy, ctype,
+        product2, year, state_code, pduns, contractingofficeid, congTerm
+    ) %>%
+    na.omit() %>%
+    mutate(binLogValue = cut(logValue,
+        c(
+            min(logValue) - 1,
+            quantile(
+                logValue,
+                seq(.2, 1, .2)
+            )
+        ),
+        include.lowest = T
+    ))
+
+matchBin <- myCEM(
+    dfMatch, "isDonation",
+    c("congTerm", "state_code", "contractingofficeid", "binLogValue")
+)
+
+mods$h1$bFirm$baseMatch <- update(mods$h1$bFirm$base, data = matchBin)
+
+
+matchTri <- myCEM(
+    dfMatch, "fDonation3",
+    c("congTerm", "state_code", "contractingofficeid", "binLogValue")
+)
+
+mods$h1$bFirm$triMatch <- update(mods$h1$bFirm$bins, data = matchTri)
+
+mms(
+    list(
+        mods$h1$bFirm$base,
+        mods$h1$bFirm$baseMatch,
+        mods$h1$bFirm$bins,
+        mods$h1$bFirm$triMatch
+    ),
+    coef_map = covariate_labels,
+    add_rows = tribble(
+        ~"term", ~"1", ~"2", ~"3", ~"4",
+        "Matched sample", "\\_", "\\checkmark", "\\_", "\\checkmark"
+    )
+) %>%
+    add_header_above(c(" " = 1, "Favoritism Risk Index (FRI)" = 4)) %>%
+    save_kable("./tables/h1Match.tex")
+
+mods$h1$bFirm$thresh <- mods$h1$bFirm$baseMatch <- mods$h1$bFirm$triMatch <- NULL
+
+#### Figure 3 ####
+
+df %>%
+    filter(isDonation == 1) %>%
+    select(giveAbs, giveOther, congTerm, pduns) %>%
+    distinct() %>%
+    mutate(
+        giveAbs = 1 + exp(giveAbs),
+        giveOther = 1 + exp(giveOther),
+        giveWho = ifelse(giveAbs / giveOther > 10, "majority", "both"),
+        giveWho = ifelse(giveAbs / giveOther < .1, "opposition", giveWho)
+    ) %>%
+    ggplot(aes(x = giveAbs, y = giveOther)) +
+    stat_density_2d(aes(fill = ..density..), geom = "raster", contour = FALSE) +
+    geom_abline(slope = 1, intercept = 0) +
+    geom_segment(aes(x = 1, xend = 10e5, y = 10, yend = 10e6), lty = "dotted") +
+    geom_segment(aes(x = 10, xend = 10e6, y = 1, yend = 10e5), lty = "dotted") +
+    scale_fill_gradient(low = "grey90", high = "black") +
+    scale_x_log10(labels = scales::dollar, limits = c(1, 10e6)) +
+    scale_y_log10(labels = scales::dollar, limits = c(1, 10e6)) +
+    labs(
+        x = "Donation to maj.",
+        y = "Donation to opp."
+    )
+
+# if (eps) ggsave("figures/h2Density.eps", height = 4, width = 5, units = "in")
+# if (pdf) ggsave("figures/h2Density.pdf", height = 4, width = 5, units = "in")
+
+
+#### Table 3 ####
+
+mods$h2$bFirm$base <- update(baselineH1, . ~ . + giveAbs)
+
+cutBins2 <- cutBins
+t12 <- coef(mods$h2$bFirm$base)
+t12 <- -t12["isDonation"] / t12["giveAbs"]
+cutBins2[2] <- t12
+
+thresh <- map(
+    seq(.5, .9, .1),
+    function(thresh) {
+        qt <- quantile(df$giveAbs[df$isDonation == 1], thresh)
+        cutBins <- cutBins2
+        cutBins[3] <- qt
+        df <- df %>%
+            mutate(
+                giveAbsBin = cut(giveAbs, cutBins, cutLabels, include.lowest = T)
+            )
+        update(baselineH1, . ~ . + giveAbsBin - isDonation, data = df)
+    }
+)
+thresh %>% map_lgl(function(m) all(m$cpval[c("giveAbsBinmid", "giveAbsBinhigh")] < 0.05))
+cutBins2[3] <- quantile(df$giveAbs[df$isDonation == 1], .9)
+df <- df %>% mutate(
+    giveAbsBin = cut(giveAbs, cutBins2, include.lowest = T, labels = cutLabels),
+    giveOtherBin = cut(giveOther, cutBins2, include.lowest = T, labels = cutLabels)
+)
+rm(thresh)
+
+mods$h2$bFirm$bin <- update(baselineH1, . ~ . - isDonation + giveAbsBin)
+mods$h2$bFirm$base2 <- update(baselineH1, . ~ . + giveAbs + giveOther)
+mods$h2$bFirm$bin2 <- update(
+    baselineH1, . ~ . - isDonation + giveAbsBin + giveOtherBin,
+    psdef = T
+)
+
+# tableH2(mods$h2$bFirm) %>% save_kable("./tables/h2.tex")
+
+#### Table A6 ####
+
+# tibble(
+#    ` ` = c("Small-Medium", "Medium-Large"),
+#    All = dollar(exp(cutBins[2:3]) - 1),
+#    `To majority` = dollar(exp(cutBins2[2:3]) - 1)
+#) %>%
+#    kbl(format = "latex") %>%
+#    save_kable("./tables/cutpoints.tex")
+
+```
+
+Figure 3 plots majority-party donations against opposition-party donations for each firm-term observation. The replication looks the same as Figure 3 in the original paper. The mass of observations falls above the diagonal, indicating that most donating firms concentrate contributions toward the majority party rather than hedging across parties. The gradient darkens sharply near the majority-dominant region, consistent with Hypothesis 2 that firms strategically target the party best positioned to affect contracting outcomes.
+
+
+\newpage
+
+
+## Table 4. Interaction Effects Between Agency Politicization and Donations on FRI (Hypothesis 3)
+
+```{r t4rep, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results='asis', floating = FALSE, tab.pos="H", tab.align="center", tab.cap = "Interaction Effects Between Agency Politicization and Donations on FRI", out.width = "100%"}
+
+#### Table 4 ####
+
+m <- felm(CRI7_final ~ isDonation + agency_cat + isDonation:agency_cat + logValue +
+    contract_action_type_dummy + commercial_procedure_dummy + ctype |
+    product2 + state_code + contractingofficeid |
+    0 | pduns + congTerm, data = df, exactDOF = T)
+
+mods$h3$nofe$base <- update(baselineH1, . ~ . + agency_cat + isDonation:agency_cat)
+mods$h3$nofe$cont <- update(baselineH1, . ~ . + agency_cat + logDonation + logDonation:agency_cat)
+mods$h3$nofe$bins <- update(baselineH1, . ~ . - isDonation + fDonation3 + agency_cat + fDonation3:agency_cat)
+mods$h3$nofe$contpres <- update(baselineH1, . ~ . + giveAbs + agency_cat + giveAbs:agency_cat)
+mods$h3$nofe$binpres <- update(baselineH1, . ~ . - isDonation + giveAbsBin + agency_cat + giveAbsBin:agency_cat)
+
+t4_table <- tableH3(mods$h3$nofe)
+t4_table %>% save_kable("./tables/h3.tex")
+if (is.character(t4_table)) cat(t4_table, sep = "\n") else t4_table
+
+```
+
+
+Table 4 tests Hypothesis 3 by interacting `isDonation` and `logDonation` with `agency_cat`. The coefficients and clustered p-values are the same as in the Table 4 of the original paper. The interaction coefficients are positive and statistically significant for cabinet-level agencies and their bureaus. The results indicate that the effect of donations on `CRI7_final` is substantially larger in agencies with less formal independence from presidential control. For independent commissions and IRCs the base effect and interaction terms are smaller and often statistically indistinguishable from zero. The gradient in effect sizes across the models supports the theoretical prediction that partisan influence over agency appointments amplifies the returns to political contributions.
+
+
+\newpage
+
+
+## Table A13. Robustness checks for H3: Controlling for lagged revenue
+
+```{r ta13rep, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results='asis', tab.pos="H", tab.align="center", tab.cap = "Robustness checks for H3", out.width = "100%"}
+
+#### Table A11 ####
+
+df <- df %>% left_join(
+    revenues %>% mutate(
+        congTerm = congTerm + 1,
+        rev = log(rev)
+    )
+)
+mods$h1$robLagRev <- map(mods$h1$bFirm, ~ update(., . ~ . + rev))
+# tableH1(mods$h1$robLagRev) %>% save_kable("./tables/h1robLagRev.tex")
+
+
+# table A13: Robustness checks for H3. This table reproduces Table 4 in the main text but controls for company lagged revenue. Results are largely robust controlling for lagged revenue.
+
+mods$h3$robLagRev <- map(mods$h3$nofe, ~ update(., . ~ . + rev))
+tA13_table <- tableH3(mods$h3$robLagRev)
+tA13_table %>% save_kable("./tables/h3robLagRev.tex")
+if (is.character(tA13_table)) cat(tA13_table, sep = "\n") else tA13_table
+
+```
+
+
+Table A13 reproduces Table 4 with lagged firm revenue added as a control. The authors provide Table A13 in their appendix for robustness checks, and the replication looks the same as the authors produce in their appendix. The interaction patterns are substantively unchanged and the key interaction coefficients remain significant for cabinet-level agencies. This rules out the possibility that past firm size drives both donation capacity and contracting success, leaving the causal interpretation of Hypothesis 3.
+
+
+\newpage
+
+
+## Figure 4. Marginal Effect of Donations on Favoritism by Agency Politicization
+
+```{r f4rep, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results='asis', fig.pos="H", fig.align="center", out.width = "100%"}
+
+#### Table A23 ###
+
+mods$h3$cat4$base <- update(baselineH1, . ~ . + agency_cat2 + isDonation:agency_cat2)
+mods$h3$cat4$cont <- update(baselineH1, . ~ . + agency_cat2 + logDonation + logDonation:agency_cat2)
+mods$h3$cat4$bins <- update(baselineH1, . ~ . - isDonation + fDonation3 + agency_cat2 + fDonation3:agency_cat2)
+mods$h3$cat4$contpres <- update(baselineH1, . ~ . + giveAbs + agency_cat2 + giveAbs:agency_cat2)
+mods$h3$cat4$binpres <- update(baselineH1, . ~ . - isDonation + giveAbsBin + agency_cat2 + giveAbsBin:agency_cat2)
+
+# tableH3(mods$h3$cat4) %>% save_kable("./tables/h3cat4.tex")
+
+
+#### Figure 4 ####
+
+x <- model.matrix(mods$h3$cat4$cont)
+x <- x[1:4, ]
+x[, ] <- 0
+x[, "logDonation"] <- 1
+x[2, "agency_cat2indep. agency:logDonation"] <-
+    x[3, "agency_cat2cabinet/exec. dep. and bureau:logDonation"] <-
+    x[4, "agency_cat2cabinet/exec. dep. (not bureau):logDonation"] <- 1
+
+
+CI <- t(mvrnorm(nRep, mu = coef(mods$h3$cat4$cont), Sigma = vcov(mods$h3$cat4$cont))) # sample coefs from the variance covariance matrix
+CI <- x %*% CI
+CI <- t(apply(CI, 1, quantile, probs = c(.025, .975)))
+colnames(CI) <- c("LB", "UB")
+
+pe <- as.numeric(x %*% coef(mods$h3$cat4$cont))
+pl <- tibble(
+    donation = c("Indep. commission & IRC", "Indep. agency", "Cabinet/exec. dep. and bureau", "Cabinet/exec. dep. (not bureau)"),
+    pe = pe
+) %>%
+    bind_cols(as_tibble(CI)) %>%
+    mutate(
+        donation = fct_inorder(donation)
+    )
+
+ggplot(pl, aes(x = donation, y = pe, ymin = LB, ymax = UB)) +
+    geom_point() +
+    geom_linerange() +
+    geom_hline(yintercept = 0, lty = "dotted") +
+    coord_flip() +
+    labs(
+        x = "Agency type",
+        y = "Marginal effect of Log donation on FRI"
+    ) 
+
+```
+
+Figure 4 plots the marginal effect of `logDonation` on `CRI7_final` by the four category agency type (`agency_cat2`), with $95\%$ confidence intervals. The point estimates are positive and the confidence intervals exclude zero for both cabinet department categories. For independent agencies and independent commissions the estimates are near zero and statistically indistinguishable from it. The figure looks the same as Figure 4 in the original paper, and the results support the conclusion that donations have a stronger effect on favoritism risk in agencies with less formal insulation from presidential control, which is implied by Hypothesis 3.
+
+
+\newpage
+
+
+# 3. Methodological Extension
+
+## Why this method is necessary
+
+@fazekasagency2023 moderate the donation and favoritism relationship by agency independence, classified into four ordered tiers of formal insulation from presidential control. This framework captures meaningful structural variation but treats agencies within each tier as equivalent. Regulatory agencies, those with binding rulemaking authority over private actors, represent a distinct institutional type that the four-tier classification does not fully isolate. Because regulatory decisions directly shape the competitive environment facing firms, the expected returns to political investment are highest in agencies that can impose or waive compliance costs. The regulatory versus non-regulatory distinction thus provides a theoretically grounded alternative moderator and tests whether donation-driven favoritism concentrates specifically in agencies whose discretion carries distributional weight for donors.
+
+
+## How the method improves the paper
+
+For homework 1, I extend the baseline specification by constructing a binary indicator that classifies agencies as regulatory or non-regulatory. The classification combines three matching strategies: strict matching against agency identifiers from @acsmapping2025, who estimate dynamic ideal points for US federal regulatory agencies from Clinton through Trump using an OIRA-based item response theory model; broad matching based on whether agencies issued final rules in the Federal Register during 2004 to 2015; and fuzzy string matching to resolve agencies not captured by the first two approaches. The combined indicator (`regulatory_finalmatch`) replaces the four-tier independence moderator in the baseline interaction model while retaining the original fixed-effect structure and clustering. This approach implicitly assumes that regulatory status is a meaningful and observable characteristic that firms can identify and target when allocating contributions. I also estimate (1) a difference-in-differences-in-differences (DDD) model that adds presidential party as a third dimension and (2) an event-study design around the 2009 Bush-Obama transition to examine whether donation effects in regulatory agencies vary with partisan control of the executive.
+
+The tables below describe the agency composition of @fazekasagency2023's sample by independence category and contract frequency. I examine agency coverage before estimating extension models to identify distributional imbalances across tiers and to assess how well the ACS matching procedure covers the sample [@acsmapping2025]. To merge the ACS regulatory classification with the original data, I first create a one-to-one lookup table that maps each agency in the sample to its corresponding 4-level independence category. I then merge the ACS regulatory classification into the original data using agency identifiers and names, prioritizing exact matches and using fuzzy string matching for unmatched agencies. The resulting `regulatory_finalmatch` variable classifies agencies as regulatory or non-regulatory based on the combined matching procedure. The extension models then replace `agency_cat` with `regulatory_finalmatch` as the moderator in the interaction with donations.
+
+
+```{r extensiondesc, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results='asis', tab.pos="H", tab.align="center", tab.cap = "Robustness checks for H3", out.width = "100%"}
+
+# explanatory tables for agency_name before extension models
+
+# 1) coverage table: agency counts and years by 4-level category
+agency_df <- df %>%
+  filter(!is.na(agency_name), !is.na(year), !is.na(agency_cat2))
+
+agency_overview <- agency_df %>%
+  group_by(agency_cat2) %>%
+  summarize(
+    `Unique agencies` = n_distinct(agency_name),
+    `Contract observations` = n(),
+    `Years in sample` = n_distinct(year),
+    `First year` = min(year, na.rm = TRUE),
+    `Last year` = max(year, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  rename(`Agency category (4-level)` = agency_cat2) %>%
+  arrange(desc(`Contract observations`))
+
+agency_overview_total <- agency_df %>%
+  summarize(
+    `Agency category (4-level)` = "Total",
+    `Unique agencies` = n_distinct(agency_name),
+    `Contract observations` = n(),
+    `Years in sample` = n_distinct(year),
+    `First year` = min(year, na.rm = TRUE),
+    `Last year` = max(year, na.rm = TRUE)
+  )
+
+agency_overview <- bind_rows(agency_overview, agency_overview_total)
+
+
+t1agency <- knitr::kable(
+  agency_overview,
+  format = "latex",
+  booktabs = TRUE,
+  caption = "Total Number of Contracts by Agency Category in Fazekas et al. (2023) Sample",
+  align = c("l", "r", "r", "r", "r", "r")
+) %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "center",
+    latex_options = c("hold_position", "scale_down")
+  )
+
+
+if (nrow(agency_overview) > 1) {
+  t1agency <- t1agency %>%
+    row_spec(nrow(agency_overview) - 1, hline_after = TRUE)
+}
+
+t1agency
+
+
+# one-to-one lookup: agency -> 4-level category
+agency_category_lookup <- df %>%
+  filter(!is.na(agency_name), !is.na(agency_cat2)) %>%
+  distinct(agency_name, agency_cat2) %>%
+  group_by(agency_name) %>%
+  summarize(
+    `Agency category (4-level)` =
+      if_else(
+        n_distinct(agency_cat2) == 1,
+        as.character(first(agency_cat2)),
+        paste(sort(unique(as.character(agency_cat2))), collapse = "; ")
+      ),
+    .groups = "drop"
+  )
+
+
+# 2) top-20 agencies by frequency, with yearly counts
+top20_agencies <- df %>%
+  filter(!is.na(agency_name), !is.na(year)) %>%
+  count(agency_name, sort = TRUE, name = "Total contracts") %>%
+  slice_head(n = 20)
+
+top20_agencies_by_year <- df %>%
+  filter(!is.na(agency_name), !is.na(year)) %>%
+  semi_join(top20_agencies, by = "agency_name") %>%
+  count(agency_name, year, name = "n") %>%
+  pivot_wider(
+    names_from = year,
+    values_from = n,
+    values_fill = 0
+  ) %>%
+  left_join(agency_category_lookup, by = "agency_name") %>%
+  left_join(top20_agencies, by = "agency_name") %>%
+  select(agency_name, `Agency category (4-level)`, `Total contracts`, everything()) %>%
+  arrange(desc(`Total contracts`)) %>%
+  rename(`Agency name` = agency_name) %>%
+  mutate(
+    across(where(is.numeric)),
+    `Agency category (4-level)` = replace_na(`Agency category (4-level)`, "Missing")
+  )
+
+t2agency <- knitr::kable(
+  top20_agencies_by_year,
+  format = "latex",
+  booktabs = TRUE,
+  caption = "Top 20 Agencies by Contract Frequency by Year",
+  align = c("l", "l", rep("c", ncol(top20_agencies_by_year) - 2))
+) %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "center",
+    latex_options = c("hold_position", "scale_down"),
+    font_size = 10
+  )
+
+t2agency
+
+
+# 3) bottom 20 agencies by frequency, with yearly counts
+bottom20_agencies <- df %>%
+  filter(!is.na(agency_name), !is.na(year)) %>%
+  count(agency_name, sort = TRUE, name = "Total contracts") %>%
+  slice_tail(n = 20)
+
+bottom20_agencies_by_year <- df %>%
+  filter(!is.na(agency_name), !is.na(year)) %>%
+  semi_join(bottom20_agencies, by = "agency_name") %>%
+  count(agency_name, year, name = "n") %>%
+  pivot_wider(
+    names_from = year, 
+    values_from = n,
+    values_fill = 0
+  ) %>%
+  left_join(agency_category_lookup, by = "agency_name") %>%
+  left_join(bottom20_agencies, by = "agency_name") %>%
+  select(agency_name, `Agency category (4-level)`, `Total contracts`, everything()) %>%
+  arrange(`Total contracts`) %>%
+  rename(`Agency name` = agency_name) %>%
+  mutate(
+    across(where(is.numeric), scales::comma),
+    `Agency category (4-level)` = replace_na(`Agency category (4-level)`, "Missing")
+  )
+
+t3agency <- knitr::kable(
+  bottom20_agencies_by_year,
+  format = "latex",
+  booktabs = TRUE,
+  caption = "Bottom 20 Agencies by Contract Frequency by Year",
+  align = c("l", "l", rep("c", ncol(bottom20_agencies_by_year) - 2))
+) %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "center",
+    latex_options = c("hold_position", "scale_down"),
+    font_size = 10
+  ) 
+
+t3agency
+
+
+# 4) distribution of agencies by category
+agency_category_distribution <- df %>%
+  filter(!is.na(agency_cat2)) %>%
+  count(agency_cat2, name = "Count") %>%
+  mutate(Percentage = scales::percent(Count / sum(Count))) %>%
+  rename(`Agency category (4-level)` = agency_cat2)  
+
+t4agencydist <- knitr::kable(
+  agency_category_distribution,
+  format = "latex",
+  booktabs = TRUE,
+  caption = "Distribution of Agencies by Category in Fazekas et al. (2023) Sample",
+  align = c("l", "r", "r")
+) %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "center",
+    latex_options = c("hold_position")
+  )
+
+t4agencydist
+
+```
+
+
+```{r extensionsetup, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results='asis', tab.pos="H", tab.align="center", tab.cap = "Robustness checks for H3", out.width = "100%"}
+
+# load ideal point estimates from @acsmapping2025
+
+# merge ideal point estimates with the existing dataset (by agency_name) 
+
+# potential options:
+# 1. use ideal point estimates
+# from here.. do: isDonation * ideal point interaction, logDonation * ideal point interaction, fDonation3 * ideal point interaction, giveAbs * ideal point interaction, giveAbsBin * ideal point interaction
+
+
+# 2. regulatory vs. non-regulatory agencies
+# make regulatory dummy and interact with donation variables
+
+
+# 3. services vs. goods contracts
+# make services dummy and interact with donation variables
+
+
+# 4. only departments vs. only independent agencies
+# subset data to only departments and only independent agencies, and run separate models for each subset to see if the relationship between donations and favoritism differs by agency type
+
+
+# for HW 1, try 2. regulatory vs. non-regulatory agencies, since this is more straightforward and less likely to require additional data cleaning than the ideal point estimates.
+# I can use the ACS dynamic estimates to identify which agencies are regulatory and create a dummy variable for regulatory agencies, then interact this dummy with the donation variables in the regression models
+# to test whether the effect of donations on favoritism differs between regulatory and non-regulatory agencies
+
+
+# ------------------------------------------------------------
+# extension setup: ACS 2025 agency merge + regulatory dummy
+# keep original df unchanged; build df_extension as a new object
+# ------------------------------------------------------------
+
+# step 0) normalize agency names for robust matching
+clean_agency_text <- function(x) {
+  x %>%
+    str_to_lower() %>%
+    str_replace_all("&", " and ") %>%
+    str_replace_all("\\badmin\\.?\\b", "administration") %>%
+    str_replace_all("\\boffice\\b", "office") %>%
+    str_replace_all("\\boffices\\b", "offices") %>%
+    str_replace_all("[^a-z0-9]+", " ") %>%
+    str_squish()
+}
+
+# step 1) load ACS dynamic estimates (copied into the Fazekas folder)
+acs_dynamic <- read_csv("./dynamic_estimates_acs2025.csv", show_col_types = FALSE)
+
+# step 2) get full agency names from ACS project files
+# primary source: ACS merged agency file (full names for most agency IDs)
+acs_name_from_project <- read_csv("../acs-2025-apsr/data/rcl_ideal_points_merged.csv",
+                                  show_col_types = FALSE) %>%
+  transmute(
+    agency.id,
+    agency_name = coalesce(agency.y, agency.x, cleaned_agency)
+  ) %>%
+  filter(!is.na(agency.id), !is.na(agency_name)) %>%
+  distinct()
+
+# use Acs's agency IDs from Appendix Table A1 labels (IDs not in the merged file)
+acs_name_from_a1 <- tribble(
+  ~agency.id,   ~agency_name,
+  "AID",        "Agency for International Development",
+  "BENCHMARK",  "Benchmark",
+  "FAR",        "Federal Acquisition Regulatory Council",
+  "GSA",        "General Services Administration",
+  "NARA",       "National Archives and Records Administration",
+  "NASA",       "National Aeronautics and Space Administration",
+  "NCUA",       "National Credit Union Administration",
+  "OPM",        "Personnel Management",
+  "RRB",        "Railroad Retirement Board",
+  "SBA",        "Small Business Administration",
+  "SSA",        "Social Security Administration",
+  "STATE",      "Department of State",
+  "VA",         "Department of Veterans Affairs"
+)
+
+# step 3) build one ACS lookup (prefer A1 fallback labels when provided)
+acs_name_lookup <- bind_rows(acs_name_from_a1, acs_name_from_project) %>%
+  distinct(agency.id, .keep_all = TRUE) %>%
+  mutate(
+    agency_name_clean = clean_agency_text(agency_name),
+    agency_id_clean = str_to_upper(str_replace_all(agency.id, "[^A-Z0-9]+", ""))
+  )
+
+# step 4) use dynamic_estimates_acs2025 with full names + clean keys
+dynamic_estimates_acs2025_enriched <- acs_dynamic %>%
+  left_join(
+    acs_name_lookup %>% select(agency.id, agency_name, agency_name_clean, agency_id_clean),
+    by = "agency.id"
+  ) %>%
+  mutate(
+    agency_name = coalesce(agency_name, agency.id),
+    agency_name_clean = clean_agency_text(agency_name),
+    agency_id_clean = str_to_upper(str_replace_all(agency.id, "[^A-Z0-9]+", ""))
+  )
+
+# save enriched ACS file without overwriting the original
+write_csv(dynamic_estimates_acs2025_enriched,
+          "./dynamic_estimates_acs2025_with_names.csv")
+
+# step 5) agency-level ACS lookup for merge (exclude benchmark row)
+acs_agency_lookup <- dynamic_estimates_acs2025_enriched %>%
+  filter(agency.id != "BENCHMARK") %>%
+  distinct(agency.id, agency_name, agency_name_clean, agency_id_clean)
+
+# step 6) merge ACS agency IDs into Fazekas df using cleaned agency names
+# clean &, and, and common abbreviation diffs
+df_extension <- df %>%
+  mutate(
+    agency_name_clean = clean_agency_text(agency_name)
+  ) %>%
+  left_join(
+    acs_agency_lookup %>%
+      distinct(agency_name_clean, .keep_all = TRUE) %>%
+      rename(
+        agency_id_acs = agency.id,
+        agency_name_acs = agency_name,
+        agency_id_clean_acs = agency_id_clean
+      ),
+    by = "agency_name_clean"
+  ) %>%
+  mutate(
+    agency_id_clean = agency_id_clean_acs,
+    regulatory = if_else(!is.na(agency_id_acs), 1L, 0L)
+  ) %>%
+  select(-agency_id_clean_acs)
+
+# step 7) quick merge checks
+regulatory_merge_check <- df_extension %>%
+  summarize(
+    n_obs = n(),
+    n_agencies = n_distinct(agency_name),
+    n_agencies_matched_to_acs = n_distinct(agency_name[!is.na(agency_id_acs)]),
+    pct_obs_regulatory = mean(regulatory) * 100
+  )
+
+knitr::kable(regulatory_merge_check,
+             booktabs = TRUE,
+             format = "latex",
+             caption = "ACS (2025) Merge Check and Regulatory Dummy Coverage") %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "center",
+    latex_options = c("hold_position")
+  )
+
+
+
+# check regulatory variable
+# "regulatory" %in% names(df_extension)
+# tail(names(df_extension), 5)
+# table(df_extension$regulatory, useNA = "ifany")
+
+```
+
+```{r regulatoryaudit, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results='asis', tab.pos="H", tab.align="center", tab.cap = "Regulatory agency audit", out.width = "100%"}
+
+# ------------------------------------------------------------
+# regulatory audit
+# goal:
+# 1) build a broad regulatory agency reference list
+#    (Federal Register final-rule agencies, 2004-2015)
+# 2) compare strict ACS-based regulatory coding vs broad coding
+# 3) export full lists for manual double-check
+# ------------------------------------------------------------
+
+stopifnot(exists("df_extension"), exists("acs_agency_lookup"))
+
+# fallback helper in case this chunk is run independently
+if (!exists("clean_agency_text")) {
+  clean_agency_text <- function(x) {
+    x %>%
+      str_to_lower() %>%
+      str_replace_all("&", " and ") %>%
+      str_replace_all("\\badmin\\.?\\b", "administration") %>%
+      str_replace_all("\\boffice\\b", "office") %>%
+      str_replace_all("\\boffices\\b", "offices") %>%
+      str_replace_all("[^a-z0-9]+", " ") %>%
+      str_squish()
+  }
+}
+
+# 1) strict reference (ACS agencies used for ideal points)
+regulatory_reference_strict <- acs_agency_lookup %>%
+  transmute(
+    agency_id_acs = agency.id,
+    agency_name_strict = agency_name,
+    agency_name_clean
+  ) %>%
+  filter(!is.na(agency_name_clean), agency_name_clean != "") %>%
+  group_by(agency_name_clean) %>%
+  summarize(
+    agency_id_acs = paste(sort(unique(agency_id_acs)), collapse = "; "),
+    agency_name_strict = paste(sort(unique(agency_name_strict)), collapse = "; "),
+    .groups = "drop"
+  )
+
+# 2) broad reference (agencies issuing final rules in ACS Federal Register data)
+regulatory_reference_broad <- read_csv(
+  "../acs-2025-apsr/data/final_rules_from_api.csv",
+  col_select = c(agency_names, publication_date),
+  show_col_types = FALSE
+) %>%
+  mutate(
+    pub_year = lubridate::year(lubridate::mdy(publication_date))
+  ) %>%
+  filter(pub_year >= 2004, pub_year <= 2015, !is.na(agency_names)) %>%
+  separate_rows(agency_names, sep = ";") %>%
+  transmute(
+    agency_name_broad = str_squish(agency_names),
+    agency_name_clean = clean_agency_text(agency_name_broad)
+  ) %>%
+  filter(agency_name_clean != "") %>%
+  group_by(agency_name_clean) %>%
+  summarize(
+    agency_name_broad = paste(sort(unique(agency_name_broad)), collapse = "; "),
+    .groups = "drop"
+  )
+
+# 3) full regulatory reference list for audit
+regulatory_reference_full <- full_join(
+  regulatory_reference_broad,
+  regulatory_reference_strict,
+  by = "agency_name_clean"
+) %>%
+  mutate(
+    in_federal_register = !is.na(agency_name_broad),
+    in_acs_strict = !is.na(agency_id_acs),
+    agency_name_reference = coalesce(agency_name_broad, agency_name_strict)
+  ) %>%
+  select(
+    agency_name_reference, agency_name_clean,
+    agency_id_acs, in_acs_strict, in_federal_register
+  ) %>%
+  arrange(agency_name_reference)
+
+# 4) add broad dummy for auditing (do not overwrite existing regulatory variable)
+df_extension_audit <- df_extension %>%
+  mutate(
+    regulatory_strict = regulatory,
+    regulatory_broad = if_else(
+      agency_name_clean %in% regulatory_reference_broad$agency_name_clean, 1L, 0L
+    )
+  )
+
+# 5) 4 audit lists
+audit_matched_acs <- df_extension_audit %>%
+  filter(regulatory_strict == 1) %>%
+  distinct(agency_name, agency_id_acs, agency_name_acs) %>%
+  arrange(agency_name)
+
+audit_broad_not_strict <- df_extension_audit %>%
+  filter(regulatory_strict == 0, regulatory_broad == 1) %>%
+  distinct(agency_name, agency_name_clean) %>%
+  left_join(
+    regulatory_reference_broad %>% select(agency_name_clean, agency_name_broad),
+    by = "agency_name_clean"
+  ) %>%
+  arrange(agency_name)
+
+audit_unmatched <- df_extension_audit %>%
+  filter(regulatory_strict == 0, regulatory_broad == 0) %>%
+  distinct(agency_name, agency_name_clean) %>%
+  arrange(agency_name)
+
+if (nrow(audit_unmatched) > 0 && nrow(regulatory_reference_broad) > 0) {
+  dist_mat <- adist(
+    audit_unmatched$agency_name_clean,
+    regulatory_reference_broad$agency_name_clean
+  )
+  nearest_idx <- max.col(-dist_mat, ties.method = "first")
+  min_dist <- dist_mat[cbind(seq_len(nrow(dist_mat)), nearest_idx)]
+
+  audit_fuzzy_candidates <- audit_unmatched %>%
+    mutate(
+      nearest_broad_agency = regulatory_reference_broad$agency_name_broad[nearest_idx],
+      nearest_broad_clean = regulatory_reference_broad$agency_name_clean[nearest_idx],
+      edit_distance = as.integer(min_dist),
+      normalized_distance = edit_distance / pmax(
+        nchar(agency_name_clean), nchar(nearest_broad_clean)
+      )
+    ) %>%
+    filter(normalized_distance <= 0.25) %>%
+    arrange(normalized_distance, agency_name)
+} else {
+  audit_fuzzy_candidates <- tibble(
+    agency_name = character(),
+    agency_name_clean = character(),
+    nearest_broad_agency = character(),
+    nearest_broad_clean = character(),
+    edit_distance = integer(),
+    normalized_distance = numeric()
+  )
+}
+
+# 6) export full list + audit outputs
+write_csv(regulatory_reference_full,
+          "./tables/regulatory_reference_full_2004_2015.csv")
+write_csv(audit_matched_acs,
+          "./tables/regulatory_audit_matched_acs.csv")
+write_csv(audit_broad_not_strict,
+          "./tables/regulatory_audit_broad_not_strict.csv")
+write_csv(audit_unmatched,
+          "./tables/regulatory_audit_unmatched.csv")
+write_csv(audit_fuzzy_candidates,
+          "./tables/regulatory_audit_fuzzy_candidates.csv")
+
+# 7) compact diagnostics
+audit_summary <- tibble(
+  metric = c(
+    "Unique agencies in Fazekas data",
+    "Strict ACS matches (regulatory_strict = 1)",
+    "Broad-only matches (broad=1, strict=0)",
+    "Unmatched in both references",
+    "Fuzzy candidates among unmatched",
+    "Broad regulatory reference size (2004-2015)"
+  ),
+  n = c(
+    n_distinct(df_extension_audit$agency_name),
+    nrow(audit_matched_acs),
+    nrow(audit_broad_not_strict),
+    nrow(audit_unmatched),
+    nrow(audit_fuzzy_candidates),
+    nrow(regulatory_reference_broad)
+  )
+)
+
+```
+
+
+```{r regulatorymatch, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results='asis', tab.pos="H", tab.align="center", tab.cap = "Regulatory agency audit", out.width = "100%"}
+
+knitr::kable(
+  audit_summary,
+  booktabs = TRUE,
+  longtable = FALSE,
+  format = "latex",
+  caption = "Regulatory Audit Summary (Strict ACS vs Broad Rulemaking Reference)"
+) %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "center",
+    latex_options = c("hold_position")
+  ) 
+
+
+knitr::kable(
+  head(audit_broad_not_strict, 10),
+  booktabs = TRUE,
+  format = "latex",
+  caption = "Sample of Agencies Matched by Broad Rulemaking Reference but not ACS (2025) (first 10)"
+) %>%
+    kable_styling(
+    full_width = FALSE,
+    position = "center",
+    latex_options = c("hold_position", "scale_down"),
+    font_size = 10
+  ) 
+
+
+knitr::kable(
+  head(audit_fuzzy_candidates, 10),
+  booktabs = TRUE,
+  format = "latex",
+  digits = 3,
+  caption = "Sample of Fuzzy Match Candidates among Unmatched Agencies (first 10)",
+  col.names = c("Agency name", "Clean name", "Nearest broad agency",
+                "Nearest broad (clean)", "Edit dist.", "Norm. dist.")
+) %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "center",
+    latex_options = c("hold_position", "scale_down"),
+    font_size = 10
+  ) 
+
+knitr::kable(
+  head(regulatory_reference_full, 10),
+  booktabs = TRUE,
+  format = "latex",
+  caption = "Sample Regulatory Agency Reference List Used for Audit (Strict ACS + Broad Rulemaking)"
+) %>%
+    kable_styling(
+    full_width = FALSE,
+    position = "center",
+    latex_options = c("hold_position", "scale_down"),
+    font_size = 10
+  ) 
+
+```
+
+
+```{r regfinalmatch, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results='asis', tab.pos="H", tab.align="center", tab.cap = "Final regulatory match setup", out.width = "100%"}
+
+# ------------------------------------------------------------
+# final regulatory match variable for extension models
+# regulatory_finalmatch = 1 if matched by strict / broad / fuzzy
+# ------------------------------------------------------------
+
+stopifnot(exists("df_extension_audit"), exists("audit_fuzzy_candidates"))
+
+# 1) fuzzy matched agency set (from audit chunk)
+fuzzy_agency_set <- audit_fuzzy_candidates %>%
+  distinct(agency_name_clean)
+
+# 2) final merged dataset for extension analysis
+df_extension_final <- df_extension_audit %>%
+  mutate(
+    regulatory_fuzzy = if_else(
+      agency_name_clean %in% fuzzy_agency_set$agency_name_clean, 1L, 0L
+    ),
+    regulatory_finalmatch = if_else(
+      regulatory_strict == 1L | regulatory_broad == 1L | regulatory_fuzzy == 1L,
+      1L, 0L
+    )
+  )
+
+# 3) quick check table
+regulatory_finalmatch_check <- df_extension_final %>%
+  summarize(
+    contract = n(),
+    agencies = n_distinct(agency_name),
+    reg_agencies_finalmatch = n_distinct(agency_name[regulatory_finalmatch == 1]),
+    pct_obs_finalmatch = mean(regulatory_finalmatch) * 100
+  )
+
+# 4) final match table
+knitr::kable(
+  regulatory_finalmatch_check,
+  booktabs = TRUE,
+  format = "latex",
+  caption = "Final Regulatory Match Coverage (strict + broad + fuzzy)"
+) %>%
+    kable_styling(
+    full_width = FALSE,
+    position = "center",
+    latex_options = c("hold_position")
+  ) 
+
+# 4-2) export final dataset for extension analysis
+write_csv(df_extension_final, "./df_extension_finalmatch_fazekas-acs.csv")
+
+```
+
+
+```{r reganalysis, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results='asis', tab.pos="H", tab.align="center", tab.cap = "Regulatory Agencies Analysis", out.width = "100%"}
+# ------------------------------------------------------------
+# extension analysis: regulatory vs non-regulatory agencies
+# acs + fazekas merged regulatory variable (strict + broad + fuzzy)
+# test extended H3: the relationship between donations and favoritism is stronger for regulatory agencies
+# ------------------------------------------------------------
+
+stopifnot(exists("baselineH1"), exists("df_extension_final"))
+
+# model scaffold for extensions
+mods$h3$regfinal$base <- update(
+  baselineH1,
+  . ~ . + regulatory_finalmatch + isDonation:regulatory_finalmatch,
+  data = df_extension_final
+)
+
+mods$h3$regfinal$cont <- update(
+  baselineH1,
+  . ~ . + regulatory_finalmatch + logDonation + logDonation:regulatory_finalmatch,
+  data = df_extension_final
+)
+
+mods$h3$regfinal$bins <- update(
+  baselineH1,
+  . ~ . - isDonation + fDonation3 + regulatory_finalmatch + fDonation3:regulatory_finalmatch,
+  data = df_extension_final
+)
+
+mods$h3$regfinal$contpres <- update(
+  baselineH1,
+  . ~ . + giveAbs + regulatory_finalmatch + giveAbs:regulatory_finalmatch,
+  data = df_extension_final
+)
+
+mods$h3$regfinal$binpres <- update(
+  baselineH1,
+  . ~ . - isDonation + giveAbsBin + regulatory_finalmatch + giveAbsBin:regulatory_finalmatch,
+  data = df_extension_final
+)
+
+```
+
+\FloatBarrier
+\clearpage
+
+## Table 4 (Extension). Interaction Effects Between Regulatory Match and Donations on FRI
+
+```{r t4extregfinal, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results='asis', floating = FALSE, tab.pos="H", tab.align="center", tab.cap = "Extension Table 4: Regulatory Match and Donations on FRI", out.width = "100%"}
+
+stopifnot(!is.null(mods$h3$regfinal$base))
+
+# labels for new moderator terms
+covariate_labels_reg <- c(
+  covariate_labels,
+  "regulatory_finalmatch" = "Regulatory agency (final match)",
+  "isDonation:regulatory_finalmatch" = "Donation dummy $\\times$ Regulatory agency",
+  "logDonation:regulatory_finalmatch" = "Log donation $\\times$ Regulatory agency",
+  "regulatory_finalmatch:logDonation" = "Log donation $\\times$ Regulatory agency",
+  "fDonation3mid:regulatory_finalmatch" = "Med. donation $\\times$ Regulatory agency",
+  "fDonation3high:regulatory_finalmatch" = "Lrg. donation $\\times$ Regulatory agency",
+  "giveAbs:regulatory_finalmatch" = "Log donation to majority $\\times$ Regulatory agency",
+  "regulatory_finalmatch:giveAbs" = "Log donation to majority $\\times$ Regulatory agency",
+  "giveAbsBinmid:regulatory_finalmatch" = "Med. donation to maj. $\\times$ Regulatory agency",
+  "giveAbsBinhigh:regulatory_finalmatch" = "Lrg. donation to maj. $\\times$ Regulatory agency"
+)
+
+# helper for kablestyle regression tables (with stars + proper heading)
+tableH3_reg_kbl <- function(models,
+                            title = "Favoritism Risk Index (FRI)",
+                            caption_text = NULL) {
+  clabs <- covariate_labels_reg
+  clabs <- gsub(" ($\\\\beta_1$)", "", clabs, fixed = TRUE)
+  clabs <- gsub(" ($\\\\beta_2$)", "", clabs, fixed = TRUE)
+  clabs <- gsub(" ($\\\\beta_3$)", "", clabs, fixed = TRUE)
+  clabs <- gsub(" ($\\\\beta_4$)", "", clabs, fixed = TRUE)
+
+  names(models) <- sprintf("(%s)", seq_along(models))
+  hdr <- setNames(c(1, length(models)), c(" ", title))
+
+  modelsummary(
+    models,
+    coef_map = clabs,
+    statistic = "p.value",
+    stars = TRUE,
+    gof_omit = "Std|R2 Adj.|AIC|BIC|Log.Lik.|F|RMSE",
+    gof_map = c("nobs", "r.squared"),
+    output = "kableExtra",
+    title = caption_text,
+    escape = FALSE
+  ) %>%
+    add_header_above(hdr, escape = FALSE) %>%
+    kable_styling(
+      full_width = FALSE,
+      position = "center",
+      latex_options = c("HOLD_position", "scale_down")
+    )
+}
+
+t4ext_reg_table <- tableH3_reg_kbl(
+  mods$h3$regfinal,
+  caption_text = "Extension Table 4: Regulatory match and donations on FRI"
+)
+
+t4ext_reg_table %>% save_kable("./tables/h3_regfinal.tex") 
+t4ext_reg_table
+
+
+```
+
+Table \@ref(tab:t4extregfinal) directly tests whether the effect of donations on favoritism differs by regulatory status, replacing the four-tier independence moderator with the binary `regulatory_finalmatch` indicator. The interaction terms isolate whether firms receive differentially favorable treatment in agencies with binding rulemaking authority.
+
+
+\newpage
+
+## Table A13 (Extension). Robustness checks for regulatory match models with lagged revenue
+
+```{r ta13extregfinal, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results='asis', floating = FALSE, tab.pos="H", tab.align="center", tab.cap = "Extension Table A13: Regulatory Match Models with Lagged Revenue", out.width = "100%"}
+
+stopifnot(exists("revenues"), !is.null(mods$h3$regfinal$base))
+
+# add lagged revenue to extension dataset (do not overwrite original objects)
+lag_revenues <- revenues %>%
+  mutate(
+    congTerm = congTerm + 1,
+    rev_lag = log(rev)
+  ) %>%
+  select(pduns, congTerm, rev_lag)
+
+df_extension_final_lag <- df_extension_final %>%
+  select(-any_of(c("rev", "rev_lag", "rev.x", "rev.y"))) %>%
+  left_join(lag_revenues, by = c("pduns", "congTerm")) %>%
+  mutate(rev = rev_lag) %>%
+  select(-rev_lag)
+
+stopifnot("rev" %in% names(df_extension_final_lag))
+
+mods$h3$regfinalLagRev <- map(
+  mods$h3$regfinal,
+  ~ update(., . ~ . + rev, data = df_extension_final_lag)
+)
+
+tA13ext_reg_table <- tableH3_reg_kbl(
+  mods$h3$regfinalLagRev,
+  caption_text = "Extension Table A13: Regulatory-match models with lagged revenue"
+)
+
+# table a13 extension
+tA13ext_reg_table %>% save_kable("./tables/h3_regfinal_lagrev.tex")
+tA13ext_reg_table
+
+```
+
+Table \@ref(tab:ta13extregfinal) replicates the extension specification with lagged firm revenue as an additional control, addressing the concern that firm size simultaneously predicts donation behavior and contract outcomes.
+
+\FloatBarrier
+\clearpage
+
+
+## Figure 4 (Extension). Marginal effect of log donation by regulatory status
+
+```{r f4extregfinal, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results='asis', fig.cap = "Marginal Effect of Log Donation on FRI by Regulatory Status", fig.pos="H", fig.align="center", out.width = "100%"}
+
+stopifnot(!is.null(mods$h3$regfinal$cont))
+
+# build contrasts for marginal effect of logDonation at regulatory = 0 and 1
+x <- model.matrix(mods$h3$regfinal$cont)
+x <- x[1:2, ]
+x[, ] <- 0
+x[, "logDonation"] <- 1
+
+int_name <- intersect(
+  c("logDonation:regulatory_finalmatch", "regulatory_finalmatch:logDonation"),
+  colnames(x)
+)
+if (length(int_name) == 1) x[2, int_name] <- 1
+
+CI <- t(mvrnorm(nRep, mu = coef(mods$h3$regfinal$cont), Sigma = vcov(mods$h3$regfinal$cont)))
+CI <- x %*% CI
+CI <- t(apply(CI, 1, quantile, probs = c(.025, .975)))
+colnames(CI) <- c("LB", "UB")
+
+pe <- as.numeric(x %*% coef(mods$h3$regfinal$cont))
+pl <- tibble(
+  regulatory = c("Non-regulatory agencies", "Regulatory agencies"),
+  pe = pe
+) %>%
+  bind_cols(as_tibble(CI)) %>%
+  mutate(
+    regulatory = fct_inorder(regulatory)
+  )
+
+ggplot(pl, aes(x = regulatory, y = pe, ymin = LB, ymax = UB)) +
+  geom_point() +
+  geom_linerange() +
+  geom_hline(yintercept = 0, lty = "dotted") +
+  coord_flip() +
+  labs(
+    x = "Agency group",
+    y = "Marginal effect of Log donation on FRI"
+  )
+
+```
+
+Figure \@ref(fig:f4extregfinal) translates the regression interaction from Table \@ref(tab:t4extregfinal) into marginal effects of `logDonation` on the Favoritism Risk Index for non-regulatory and regulatory agencies separately, with $95\%$ confidence intervals. This plot makes the direction and precision of the heterogeneous effect directly interpretable.
+
+
+\newpage
+
+
+## Additional Method 1. Difference-in-Differences-in-Differences (DDD)
+
+```{r regddd, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results='asis', floating = FALSE, tab.pos="H", tab.align="center", tab.cap = "DDD model: donations x regulatory x presidency", out.width = "100%"}
+
+stopifnot(exists("df_extension_final"))
+
+# ------------------------------------------------------------
+# DDD setup:
+# D_pres = 1 in Democratic presidency periods, 0 otherwise
+# Triple interaction tests whether donation effects in regulatory agencies
+# shift differentially across presidential-party periods
+# ------------------------------------------------------------
+
+df_extension_ddd <- df_extension_final %>%
+  mutate(
+    donation_reg = isDonation * regulatory_finalmatch
+  )
+
+mods$h3$ddd <- list()
+
+mods$h3$ddd$base <- update(
+  baselineH1,
+  . ~ . + isDonation + regulatory_finalmatch + D_pres +
+    isDonation:regulatory_finalmatch +
+    isDonation:D_pres +
+    regulatory_finalmatch:D_pres +
+    isDonation:regulatory_finalmatch:D_pres,
+  data = df_extension_ddd
+)
+
+mods$h3$ddd$cont <- update(
+  baselineH1,
+  . ~ . + logDonation + regulatory_finalmatch + D_pres +
+    logDonation:regulatory_finalmatch +
+    logDonation:D_pres +
+    regulatory_finalmatch:D_pres +
+    logDonation:regulatory_finalmatch:D_pres,
+  data = df_extension_ddd
+)
+
+ddd_labels <- c(
+  "isDonation" = "Donation dummy",
+  "logDonation" = "Log donation",
+  "regulatory_finalmatch" = "Regulatory agency (final match)",
+  "D_pres" = "Democratic presidency",
+  "isDonation:regulatory_finalmatch" = "Donation dummy x Regulatory",
+  "isDonation:D_pres" = "Donation dummy x Dem. presidency",
+  "regulatory_finalmatch:D_pres" = "Regulatory x Dem. presidency",
+  "isDonation:regulatory_finalmatch:D_pres" = "Donation x Regulatory x Dem. presidency",
+  "logDonation:regulatory_finalmatch" = "Log donation x Regulatory",
+  "logDonation:D_pres" = "Log donation x Dem. presidency",
+  "logDonation:regulatory_finalmatch:D_pres" = "Log donation x Regulatory x Dem. presidency"
+)
+
+t_ddd <- modelsummary(
+  list("(1)" = mods$h3$ddd$base, "(2)" = mods$h3$ddd$cont),
+  coef_map = ddd_labels,
+  statistic = "p.value",
+  stars = TRUE,
+  gof_omit = "Std|R2 Adj.|AIC|BIC|Log.Lik.|F|RMSE",
+  gof_map = c("nobs", "r.squared"),
+  output = "kableExtra",
+  title = "DDD: Donation effects by regulatory status and presidency"
+) %>%
+  add_header_above(c(" " = 1, "Favoritism Risk Index (FRI)" = 2), escape = FALSE) %>%
+  kable_styling(latex_options = c("hold_position"), position = "center")
+
+t_ddd
+
+```
+
+Table \@ref(tab:regddd) adds presidential party as a third dimension to the interaction design. The key quantity is the triple interaction term (`Donation x Regulatory x Dem. presidency`), which tests whether donation-driven favoritism in regulatory agencies is further amplified when donors' preferred party controls the executive branch.
+
+\newpage
+
+## Additional Method 2. Event-Study Around Presidential Turnover (2009)
+
+```{r regeventstudy, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, fig.cap = "Event-Study: Differential Donation Effects in Regulatory Agencies Around the 2009 Presidential Transition", fig.pos="H", fig.align="center", out.width = "100%"}
+
+stopifnot(exists("df_extension_final"))
+
+# Event time relative to 2009 turnover (Bush -> Obama).
+# Bin tails to keep estimates stable, use -1 as reference period.
+df_extension_es <- df_extension_final %>%
+  mutate(
+    event_time = year - 2009,
+    event_time_bin = case_when(
+      event_time <= -4 ~ -4,
+      event_time >= 6 ~ 6,
+      TRUE ~ event_time
+    ),
+    event_time_f = factor(event_time_bin),
+    event_time_f = relevel(event_time_f, ref = "-1"),
+    donation_reg = isDonation * regulatory_finalmatch
+  )
+
+mods$h3$event <- list()
+
+mods$h3$event$main <- felm(
+  CRI7_final ~
+    isDonation + regulatory_finalmatch +
+    donation_reg + donation_reg:event_time_f +
+    logValue + contract_action_type_dummy + commercial_procedure_dummy + ctype |
+    product2 + state_code + contractingofficeid + congTerm |
+    0 | pduns + congTerm,
+  data = df_extension_es
+)
+
+event_coefs <- broom::tidy(mods$h3$event$main) %>%
+  filter(str_detect(term, "^donation_reg:event_time_f")) %>%
+  mutate(
+    event_time = str_remove(term, "^donation_reg:event_time_f"),
+    event_time = as.numeric(event_time)
+  ) %>%
+  filter(!is.na(event_time)) %>%
+  arrange(event_time)
+
+# event study figure
+ggplot(event_coefs, aes(x = event_time, y = estimate,
+                        ymin = estimate - 1.96 * std.error,
+                        ymax = estimate + 1.96 * std.error)) +
+  geom_point() +
+  geom_linerange() +
+  geom_hline(yintercept = 0, lty = "dotted") +
+  geom_vline(xintercept = -1, lty = "dashed") +
+  scale_x_continuous(breaks = sort(unique(event_coefs$event_time))) +
+  labs(
+    x = "Event time (years relative to 2009; -1 is omitted reference)",
+    y = "Differential effect: Donation x Regulatory"
+  )
+
+```
+
+Figure \@ref(fig:regeventstudy) plots year-by-year differential donation effects in regulatory agencies relative to non-regulatory agencies, using the 2009 turnover as an event. Coefficients above zero indicate a larger donation-favoritism relationship in regulatory agencies in that year relative to the omitted reference year ($t = -1$). Pre-period coefficients are mixed and imprecise, which motivates the joint pre-trend test below.
+
+
+
+```{r regeventstudypretrend, echo = FALSE, warning = FALSE, error = FALSE, message = FALSE, results='asis', floating = FALSE, tab.pos="H", tab.align="center", tab.cap = "Pre-trend test for event-study", out.width = "100%"}
+
+stopifnot(!is.null(mods$h3$event$main))
+
+# joint test: all pre-period leads (t <= -2) are zero
+lead_terms <- broom::tidy(mods$h3$event$main) %>%
+  filter(str_detect(term, "^donation_reg:event_time_f")) %>%
+  mutate(
+    event_time = as.numeric(str_remove(term, "^donation_reg:event_time_f"))
+  ) %>%
+  filter(!is.na(event_time), event_time <= -2) %>%
+  pull(term)
+
+if (length(lead_terms) > 0) {
+  pretrend_lh <- car::linearHypothesis(
+    mods$h3$event$main,
+    lead_terms,
+    test = "F"
+  )
+
+  pretrend_tab <- tibble(
+    `Joint pre-trend null` = "All pre-period interaction terms (t <= -2) = 0",
+    `Num. lead terms` = length(lead_terms),
+    `F statistic` = as.numeric(pretrend_lh$F[2]),
+    `p-value` = as.numeric(pretrend_lh$`Pr(>F)`[2])
+  )
+} else {
+  pretrend_tab <- tibble(
+    `Joint pre-trend null` = "All pre-period interaction terms (t <= -2) = 0",
+    `Num. lead terms` = 0,
+    `F statistic` = NA_real_,
+    `p-value` = NA_real_
+  )
+}
+
+# convert p-value to 4 decimal places for display
+pretrend_tab <- pretrend_tab %>%
+  mutate(`p-value` = sprintf("%.4f", `p-value`))
+
+knitr::kable(
+  pretrend_tab,
+  booktabs = TRUE,
+  format = "latex",
+  digits = 4,
+  caption = "Event-study pre-trend joint test"
+) %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "center",
+    latex_options = c("hold_position"))
+
+```
+
+Table \@ref(tab:regeventstudypretrend) reports the joint $F$-test on the null hypothesis that all pre-period interaction terms ($t \leq -2$) are zero. The test statistic is $F = 48.06$ ($p < 0.001$), providing strong evidence against flat pre-trends. This result limits a causal interpretation of post-2009 divergence in the event-study design. I believe the DDD specification in Table \@ref(tab:regddd) is therefore the preferred identification strategy because it does not require the parallel-trends assumption to hold.
+
+\newpage
+
+# 4. Results
+
+## Agency Coverage
+
+The coverage tables show that contract observations are concentrated in a small number of large agencies, particularly cabinet departments and executive offices. Top-20 agencies account for a disproportionate share of the sample. This distribution suggests that extension results may be driven by high-activity departments rather than smaller regulatory bodies. The @acsmapping2025's matching procedure successfully links a subset of @fazekasagency2023 agencies to the regulatory ideal point database, and the combined matching strategy improves coverage over any single approach alone.
+
+## Table \@ref(tab:t4extregfinal). Interaction Effects Between Regulatory Match and Donations on FRI
+
+Table \@ref(tab:t4extregfinal) shows that the main effect of donations on the FRI is positive across all five specifications, consistent with the original paper. The interaction between donations and regulatory agency status tests whether this relationship is stronger in agencies with rulemaking authority. Results from the continuous `logDonation` specification (Column 2) are most directly comparable to the original paper's main specification. A positive interaction coefficient indicates that donors receive greater favoritism returns in regulatory agencies; a null result would suggest the donation and favoritism relationship does not vary by regulatory function beyond what formal independence captures.
+
+## Table \@ref(tab:ta13extregfinal). Robustness Check with Lagged Revenue
+
+Table \@ref(tab:ta13extregfinal) replicates the extension models after adding lagged firm revenue as a covariate. Coefficient estimates on the donation-regulatory interaction are substantively similar to those in Table \@ref(tab:t4extregfinal). Firm size does not account for the interaction pattern observed in the main extension, supporting the robustness of the primary results.
+
+## Figure \@ref(fig:f4extregfinal). Marginal Effect of Log Donation by Regulatory Status
+
+Figure \@ref(fig:f4extregfinal) presents the marginal effect of `logDonation` on the FRI for non-regulatory and regulatory agencies. A point estimate above zero indicates that donations increase favoritism risk in that agency group. The $95\%$ confidence intervals communicate uncertainty; where an interval includes zero, the donation effect is not statistically distinguishable from no effect within that group. The figure allows direct visual comparison of the magnitude and precision of donation effects across the two agency types.
+
+## Table \@ref(tab:regddd). DDD: Donation Effects by Regulatory Status and Presidential Party
+
+Table \@ref(tab:regddd) presents the DDD (Differences-in-Differences or triple differences) estimates. The central quantity is the triple interaction term (`Donation x Regulatory x Dem. presidency`). A positive and significant coefficient indicates that donation-driven favoritism in regulatory agencies is stronger during Democratic administrations. This pattern is consistent with the logic that partisan alignment between the president and donors amplifies the returns to political investment in agencies with rulemaking authority.
+
+## Figure \@ref(fig:regeventstudy). Event-Study Around the 2009 Transition
+
+Figure \@ref(fig:regeventstudy) plots year-by-year differential donation effects in regulatory agencies relative to non-regulatory agencies around the 2009 turnover. Coefficients above zero indicate a larger donation and favoritism relationship in regulatory agencies in that year relative to the omitted reference year ($t = -1$). The pre-period coefficients are mixed and imprecise across years prior to the transition.
+
+## Table \@ref(tab:regeventstudypretrend). Pre-Trend Joint Test
+
+Table \@ref(tab:regeventstudypretrend) reports the joint $F$-test for the null hypothesis that all pre-period interaction terms ($t \leq -2$) equal zero. The test statistic is $F = 48.06$ ($p < 0.001$), providing strong evidence against flat pre-trends. This result weakens a causal interpretation of the post-2009 divergence. The DDD model in Table \@ref(tab:regddd) is therefore the preferred identification strategy because it does not require the parallel-trends assumption.
+
+## Comparing DDD and Event-Study Designs
+
+In the analysis, the event-study estimates separate year-by-year coefficients for the interaction between donations and regulatory status, then reads the pre-2009 coefficients as a placebo check. A significant pre-trend $F$-test means that regulatory and non-regulatory agencies were already diverging in their donation-favoritism relationship before the transition. Therefore, any post-2009 divergence cannot be cleanly attributed to the Bush-Obama handover itself. The event-study design requires that absent the presidential transition, the donation effect in regulatory agencies would have followed the same trends as in non-regulatory agencies. That assumption is rejected in the analysis (not strong here).
+
+The DDD model sidesteps the results by differencing across three dimensions simultaneously: (1) before versus after the transition, (2) regulatory versus non-regulatory agencies, and (3) donors versus non-donors. By including all three two-way interactions and fixed effects for congressional term, product, state, and contracting office, the model absorbs (1) time trends common to all firms, (2) time trends specific to regulatory agencies, and (3) time trends specific to donating firms. What remains after those three differences is only the differential change in the donation effect within regulatory agencies that coincides with the partisan transition. This identifying assumption that the triple interaction itself has no pre-existing trend is strictly weaker than the event-study's parallel-trends requirement. The DDD specification can accommodate pre-existing level differences and even differential two-way trends between groups, as long as those trends do not themselves interact across all three dimensions. Because the pre-trend test flags a violation of the stronger event-study assumption rather than the weaker DDD assumption, the DDD model remains credible as the primary causal test even when the event-study does not.
+
+
+\newpage
+
+
+# 5. Discussion
+
+## Implications
+
+The extension demonstrates that agency regulatory function provides a substantively informative alternative to the four-tier independence classification used by @fazekasagency2023. Regulatory agencies represent high-value targets for donors because their decisions directly shape the competitive environment facing regulated firms. If the interaction between donations and regulatory status is positive, this finding shifts the mechanistic interpretation: what drives favoritism is not simply formal independence but the degree to which agency discretion carries material consequences for donors. Political contributions function as investments that yield the highest returns where regulatory power is concentrated.
+
+The DDD design extends this logic to partisan dynamics. If donation effects in regulatory agencies intensify under Democratic administrations, changes in presidential party produce measurable changes in how regulatory contracts are distributed across politically active firms. This finding contributes to debates about the political economy of the administrative state and suggests that partisan alignment between the president and donors amplifies the returns to strategic giving in the regulatory sector.
+
+## Method-Theory Link
+
+The theory in @fazekasagency2023 holds that political contributions influence favoritism through the channel of agency independence: agencies with weaker formal insulation from political principals are more responsive to signals from those principals, including signals about donor preferences. My extension proposes a related mechanism, *regulatory authority*, and tests whether it generates additional variation in the donation and favoritism relationship beyond what formal independence captures. The key coefficients directly operationalize this mechanism: the interaction between donations and `regulatory_finalmatch` identifies whether the value of political investment is higher where agencies possess rulemaking power. The extension assumes that regulatory status is a stable and observable characteristic that firms can target; if agencies shift between regulatory and non-regulatory functions over time, the binary indicator may introduce measurement error that attenuates the interaction estimate.
+
+## Limitations and Future Research
+
+The present extension is limited by its treatment of regulatory status as a binary variable. Agencies differ not only in whether they regulate but in the ideological direction of their regulatory policies across administrations. @acsmapping2025 provide continuous dynamic estimates of agency ideal points that capture this variation from Clinton through Trump. A natural extension would replace the binary `regulatory_finalmatch` indicator with these continuous ideal point estimates and interact them with donation measures and presidential party indicators. This design would allow a direct test of whether ideological proximity between a regulatory agency and the incumbent president amplifies contractor favoritism. Examining how these dynamics vary across multiple presidential periods would provide more robust identification of the conditions under which political contributions translate into distributional advantages in federal contracting. I plan to continue exploring these questions in future work.
+
+
+\newpage
+
+## References
+
+
+

@@ -1,0 +1,189 @@
+---
+title: "Replication and Extension"
+subtitle: "PLSC 503: Draft 1"
+author: "Jody Youjeong Park"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+colorlinks: true
+urlcolor: blue
+linkcolor: blue
+bibliography: references.bib
+csl: apanodoi.csl
+link-citations: true
+header-includes:
+  - \usepackage[capposition=top]{floatrow}
+  - \usepackage{placeins}   
+  - \usepackage{setspace}
+  - \usepackage{dcolumn}
+  - \usepackage{booktabs}
+  - \usepackage{siunitx}
+  - \usepackage{amsmath}
+  - \usepackage{enumerate}
+  - \usepackage[shortlabels]{enumitem}
+  - \usepackage[hang,flushmargin]{footmisc}	
+  - \usepackage{makecell}
+  - \usepackage{url}
+  - \usepackage{longtable}
+  - \usepackage{graphicx}
+  - \usepackage{array}
+  - \usepackage{multirow}
+  - \usepackage{wrapfig}
+  - \usepackage{float}
+  - \usepackage{colortbl}
+  - \usepackage{pdflscape}
+  - \usepackage{threeparttable}
+  - \usepackage{threeparttablex}
+  - \usepackage[normalem]{ulem}
+  - \usepackage{makecell}
+  - \usepackage{xcolor}
+  - \usepackage{hyperref}
+  - \hypersetup{
+      colorlinks=true,
+      linkcolor=blue,
+      filecolor=magenta,      
+      urlcolor=blue,
+      citecolor=black,
+    }
+  - \usepackage[most]{tcolorbox}
+  - \newtcolorbox{qbox}{enhanced,breakable,boxrule=0.5pt,arc=2mm,
+    colback=gray!10,colframe=black!50,left=6pt,right=6pt,top=6pt,bottom=6pt}
+---
+
+```{r setup, include = FALSE, message=FALSE, results=FALSE, echo = FALSE}
+# R libraries
+# data manipulation
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(haven)
+library(readr)
+library(caret)
+library(modelr)
+library(broom)
+library(ggplot2)
+library(plotly)
+library(png)
+library(openxlsx) 
+library(kableExtra)
+library(patchwork)
+library(texreg)
+library(estimatr)
+library(MASS) 
+library(Matrix)
+library(sandwich)   # vcovHC
+library(lmtest)     # coeftest
+library(boot)       # bootstrap
+library(conflicted)
+library(car)
+library(cowplot)
+library(AER)
+library(MatchIt)
+library(labelled)
+
+conflict_prefer("filter", "dplyr")
+conflict_prefer("select", "dplyr")
+
+# For figures
+knitr::opts_chunk$set(
+                      fig.width = 9, fig.height = 7, fig.retina = 3,
+                      out.width = "100%",
+                      cache = FALSE,
+                      echo = TRUE,
+                      message = FALSE, 
+                      warning = FALSE,
+                      hiline = TRUE
+                      )
+options(tinytex.verbose = TRUE)
+
+knitr::knit_hooks$set(plot = function (x, options) {
+  float_correct <- function(f, y, opts)  {
+    if (is.null(opts$regfloat) || opts$regfloat==FALSE)
+      paste0(f(y, opts), "\n\n\\FloatBarrier\n")
+    else
+      f(y, opts)
+  }
+  if (!is.null(options$out.width) || !is.null(options$out.height) ||
+      !is.null(options$out.extra) || options$fig.align != "default" ||
+      !is.null(options$fig.subcap)) {
+    if (is.null(options$fig.scap))
+      options$fig.scap = NA
+    return(float_correct(knitr:::hook_plot_tex, x, options))
+  }
+  return(float_correct(knitr:::hook_plot_md_base, x, options))
+})
+
+```
+
+
+# Instruction
+\begin{qbox}
+In the replication and extension paper, the results of a previous study must be fully reproduced and incorporated into the paper (possibly into the appendix). The replicated study must have been published in a peer reviewed journal or conference proceedings. The extension should include at least one method that was covered in this course, but was not used in the original study. The schedule of deliverables, along with dates, is listed below. Note, one thing to check when you are selecting the study is that you can accurately reproduce the results of the original paper. Reproduction works best when the authors share both code and data from the study.
+
+
+\begin{enumerate}
+\item DUE 2/03: A PDF document that contains (1) a bibliographic reference to the study you plan to reproduce, (2) an embedded URL that links to your GitHub, OneDrive, Box or Dropbox account location where you have stored the replication data, and (3) a research question that you plan to answer using and/or building upon the study you replicate.
+
+\item DUE 4/07: An updated PDF that includes a first draft of everything in the paper except for the final results (e.g., introduction, background/theory, research design, descriptive analysis, discussion). It is fine to include results, but it is also okay if you simply present a plan for what you are going to do in the final analysis.
+
+\item DUE 5/05: Submit complete final paper. The paper should include a link to your code and data.
+\end{enumerate}
+\end{qbox}
+
+
+## Fazekas et al. (2023) 
+
+[R replication codes and dataset](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/3U07EE) from @fazekasagency2023 "Agency Independence, Campaign Contributions, and Favoritism in US Federal Government Contracting (JPART)." 
+
+
+\bigskip
+
+
+## Replication Data
+
+The replication data and code can be found in my [Dropbox folder](https://www.dropbox.com/scl/fo/6b5w3zznokywvmlox3dt2/ANIInPxRVHuL4ys3Jqr0JX0?rlkey=3a2d8uvvkcfmbxoldhr91jobu&st=ucxm71yq&dl=0).
+
+I also plan to update my [GitHub repository for this project](https://github.com/jodypark/plsc503_replication_extension_fazekas2023) as the project progresses.
+
+
+\newpage
+
+## Research Question
+
+- **The original research question**: How do political party contributions bias the award of US federal government contracts favoring donating firms?
+  
+  
+- **Testing hypotheses** in @fazekasagency2023:
+  - *H1*: By donating to any political party, the company increases its chance of being favored in federal contracting.
+  - *H2*: By donating to the party in power, the company increases its chance of being favored in federal contracting more than by donating to the opposition.
+  - *H3*: By donating to the party in power, the company increases its chance of being favored in federal contracting especially when agency independence is low.
+  
+\bigskip
+
+- **My research question**: How does agency ideology moderate the effect of political party contributions on the award of US federal government contracts favoring donating firms?
+
+  - I plan to extend *H3* by replacing agency independence with agency ideology measures developed in @acsmapping2025; this measure consists of dynamic estimates of regulatory agency ideal points based on planned regulations data from the Unified Agenda and the president's discretionary review of those regulations.
+  
+  - I will merge @fazekasagency2023's dataset with the agency ideology used in @acsmapping2025 by matching on agency names and years. Since the agency ideology data only covers regulatory agencies, the merging process will leave regulatory agencies only.
+
+  - *H4*: By donating to the party in power, the company increases its chance of being favored in federal contracting especially when agency ideology aligns with the party in power.
+  
+
+
+---
+
+## References
+
+
+
+
+
+
+
+
+
+
+
+
+
